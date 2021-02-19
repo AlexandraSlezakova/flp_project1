@@ -4,11 +4,12 @@ import Data.Char
 import Control.Monad
 
 import Parser
+import DFAModule
 import FAModule
 
--------------------------------------
--- Read user input or content of file
--------------------------------------
+----------------------------------
+-- Read user input or file content
+----------------------------------
 getContent :: [String] -> IO String
 getContent args = do
   if length args == 1
@@ -30,4 +31,5 @@ main = do
 
         case (head args) of
           "-i" -> printFA fa
+          "-t" -> eliminateStates fa
           otherwise -> error "Error: Unknown option"

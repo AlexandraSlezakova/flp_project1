@@ -1,15 +1,23 @@
 module FAModule(
   FAStruct(..),
   Transition(..),
+  State,
+  Alphabet,
   printFA,
-  isFAValid
+  isFAValid,
+  printTransitions
 ) where
 
 import Data.Function
 import Data.Char
 import Data.List
 
+-- synonym State for type String
+type State = String
+-- synonym Alphabet for type String
+type Alphabet = String
 
+-- data structure for transitions
 data Transition = Transition {
   src     :: String,
   symbol  :: String,
@@ -17,13 +25,15 @@ data Transition = Transition {
 }
 
 
+-- data structure for automaton
 data FAStruct = FAStruct {
-  states        :: [String],
-  alphabet      :: String,
-  startState    :: String,
-  acceptStates  :: [String],
+  states        :: [State],
+  alphabet      :: Alphabet,
+  startState    :: State,
+  acceptStates  :: [State],
   transitions   :: [Transition]
 }
+
 
 ------------------
 -- Print automaton
@@ -41,19 +51,21 @@ printFA fa = do
   -- transitions
   printTransitions $ transitions fa
 
-------------------------------
--- Print transitions to stdout
-------------------------------
+
+--------------------
+-- Print transitions
+--------------------
 printTransitions :: [Transition] -> IO()
-printTransitions [] = putStrLn ""
+printTransitions [] = putStr ""
 printTransitions (transition:transitions) = do
    putStrLn $ src transition ++ "," ++ symbol transition ++ "," ++  dst transition
    printTransitions transitions
 
+
 --------------------------------------
 -- Check if state contains only digits
 --------------------------------------
-isSetOfStatesValid :: [String] -> Bool
+isSetOfStatesValid :: [State] -> Bool
 isSetOfStatesValid [] = True
 isSetOfStatesValid (x:xs) = if all isDigit x then isSetOfStatesValid xs else False
 
@@ -61,22 +73,23 @@ isSetOfStatesValid (x:xs) = if all isDigit x then isSetOfStatesValid xs else Fal
 -------------------------------------------
 -- Check if alphabet contains lower letters
 -------------------------------------------
-isAlphabetValid :: [Char] -> Bool
+isAlphabetValid :: Alphabet -> Bool
 isAlphabetValid [] = True
-isAlphabetValid (x:xs) = if isLower x then isAlphabetValid xs else False
+isAlphabetValid (x:xs) =
+  if x `elem` ['a'..'z'] then isAlphabetValid xs else False
 
 
 --------------------------------
 -- Check if start state is valid
 --------------------------------
-isStartStateValid :: String -> [String] -> Bool
+isStartStateValid :: State -> [State] -> Bool
 isStartStateValid s states = all isDigit s && s `elem` states
 
 
 ------------------------------------------------
 -- Check if accept state exists in set of states
 ------------------------------------------------
-checkAcceptStates :: [String] -> [String] -> Bool
+checkAcceptStates :: [State] -> [State] -> Bool
 checkAcceptStates [] states = True
 checkAcceptStates (state:acceptStates) states  =
   if state `elem` states then checkAcceptStates acceptStates states else False
@@ -85,7 +98,7 @@ checkAcceptStates (state:acceptStates) states  =
 -------------------------------------
 -- Check if all transitions are valid
 -------------------------------------
-checkTransitions :: [Transition] -> [String] -> String -> Bool
+checkTransitions :: [Transition] -> [State] -> Alphabet -> Bool
 checkTransitions [] states alphabet = True
 checkTransitions (transition:transitions) states alphabet =
   if isTransitionValid transition states alphabet
@@ -98,10 +111,11 @@ checkTransitions (transition:transitions) states alphabet =
 -- if source and destination state exist in set of states
 -- and if alphabet contains input symbol
 ----------------------------------------------------------
-isTransitionValid :: Transition -> [String] -> String -> Bool
+isTransitionValid :: Transition -> [State] -> Alphabet -> Bool
 isTransitionValid transition states alphabet = do
   if (src transition) `elem` states
     && isInfixOf (symbol transition) alphabet
+    && (not $ null (symbol transition))
     && (dst transition) `elem` states
     then True
     else False

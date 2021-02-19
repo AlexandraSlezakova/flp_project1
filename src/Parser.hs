@@ -6,8 +6,6 @@ import FAModule
 import Data.List.Split    -- splitOn
 import System.IO
 
-type ErrorMsg = String
-
 -----------------------------------
 -- Parse content from file or stdin
 -----------------------------------
@@ -17,7 +15,7 @@ parseContent content = FAStruct {
   alphabet      = content !! 1,                   -- the alphabet is on the second line
   startState    = content !! 2,                   -- the start state is on the third line
   acceptStates  = splitOn "," $ content !! 3,     -- the accept states are on the fourth line
-  transitions   = parseTransitions content
+  transitions   = parseTransitions content        -- the rest of content contains transitions
 }
 
 
