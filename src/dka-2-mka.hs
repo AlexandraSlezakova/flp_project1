@@ -4,12 +4,11 @@ import Data.Char
 import Control.Monad
 
 import Parser
+import MDFAModule
 import DFAModule
-import FAModule
 
-----------------------------------
--- Read user input or file content
-----------------------------------
+
+-- |Read user input or file content
 getContent :: [String] -> IO String
 getContent args = do
   if length args == 1
@@ -25,11 +24,11 @@ main = do
         error "Error: Invalid input"
       else do
         content <- getContent args
-        let fa = parseContent $ lines content
+        let dfa = parseContent $ lines content
 
-        when (not $ isFAValid fa) $ error "Error: Invalid input"
+        when (not $ isDFAValid dfa) $ error "Error: Invalid input"
 
         case (head args) of
-          "-i" -> printFA fa
-          "-t" -> eliminateStates fa
+          "-i" -> printDFA dfa
+          "-t" -> minimizeDFA dfa
           otherwise -> error "Error: Unknown option"
