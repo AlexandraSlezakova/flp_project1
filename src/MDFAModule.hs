@@ -18,83 +18,150 @@ import Data.List
 import DFAModule
 import Control.Monad
 import Data.List.Split
+import Data.Maybe
 import Parser
 
 
 minimizeDFA :: DFAStruct -> IO()
 minimizeDFA dfa = do
   let completeDFA = removeUnreachableStates dfa
-  createReducesDFA completeDFA
+  let finalStatesSet = (acceptStates completeDFA)
+  let nonFinalStatesSet = (states completeDFA) \\ finalStatesSet
+  let newStates = createStates [] ([finalStatesSet] ++ [nonFinalStatesSet]) (transitions completeDFA)
+  createTransitions newStates [] completeDFA
+  --putStrLn $ show m
+  --createReducesDFA completeDFA
+
   putStrLn "tu"
 
-  --printDFA newDfa
+  --printDFA completeDFA
+
+createTransitionInit :: [[State]] -> DFAStruct -> [Transition]
+createTransitionInit states completeDFA = do
+  -- initial state
+  let initialState = concat (filter (\x -> ((startState completeDFA) `elem` x)) states)
+  let m = getSymbolsAndStates initialState (transitions completeDFA) []
+  putStrLn $ show m
+  let k = getTransitions m [] initialState
+  let o = head (filter (\x -> ((snd x) `elem` initialState)) k)
+  let dstState = (snd o)
+  let symbol = (fst o)
+
+createTransitions :: [[State]] -> [Transition] -> DFAStruct -> IO()
+createTransitions states tr completeDFA = do
+  -- if transitions == []
+  --   then do
+
+  --putStrLn $ show k
+  putStrLn $ show states
+  putStrLn "tu1"
 
 
-createReducesDFA :: DFAStruct -> IO()
-createReducesDFA completeDFA = do
-  -- 0th partition: one set contains final states and the other non-final states
-  --let partition0 = (acceptStates completeDFA):((states completeDFA) \\ (acceptStates completeDFA)):[]
-  let nonFinalStates = ((states completeDFA) \\ (acceptStates completeDFA))
-  -- combination of states from 1st set
-  let combination1 = [(x,y) | (x:rest) <- tails (acceptStates completeDFA), y <- rest, x /= y]
-  let combination2 = [(x,y) | (x:rest) <- tails nonFinalStates, y <- rest, x /= y]
-  let k = takePairOfStates combination2 nonFinalStates (transitions completeDFA) []
-  --putStrLn $ show combination2
-  putStrLn $ show k
-  --putStrLn $ show nonFinalStates
-  putStrLn " tu"
+getTransitions :: [(Alphabet, State)] -> [(Alphabet, State)] -> [State] -> [(Alphabet, State)]
+getTransitions [] newInfo states = newInfo
+getTransitions (info:information) newInfo states = do
+  let x = filter (\i -> ((fst i) == (fst info))) information
+  --when (x == []) $ newInfo
+  getTransitions information (newInfo ++ x) states
 
 
-takePairOfStates :: [(State, State)] -> [State] -> [Transition] -> [[State]] -> [[State]]
-takePairOfStates [] setOfStates transitions partitions = partitions
-takePairOfStates (pair:pairOfStates) setOfStates transitions partitions = do
-  -- for every two states check what is their destination state
-  -- if destination state is in same set of states, states are indistinguishable
-  let isDistinguishable = areIndistinguishable pair setOfStates transitions
-
-  let p = if partitions == []
-            then do
-              if not isDistinguishable
-                then partitions ++ [[(fst pair)]] ++ [[(snd pair)]]
-                else partitions ++ [[(fst pair)] ++ [(snd pair)]]
-            else
-              editPartitions partitions [] isDistinguishable pair
-
-  takePairOfStates pairOfStates setOfStates transitions p
+-- |Create states of minimal deterministic finite automaton
+createStates :: [[State]] -> [[State]] -> [Transition] -> [[State]]
+createStates oldSet setOfSetsOfStates transitions
+  | oldSet == s = s
+  | otherwise = createStates s s transitions
+  where
+    s = calculateSet setOfSetsOfStates setOfSetsOfStates transitions []
 
 
-editPartitions :: [[State]] -> [[State]] -> Bool -> (State, State) -> [[State]]
-editPartitions [] newPartitions isDistinguishable pairOfStates = newPartitions
-editPartitions (p:partitions) newPartitions isDistinguishable pairOfStates = do
-  if isDistinguishable then do
-    if (fst pairOfStates) `elem` p
-      then do
-        let states = p ++ [(snd pairOfStates)]
-        editPartitions partitions (newPartitions ++ [states]) isDistinguishable pairOfStates
-      else do
-        editPartitions partitions (newPartitions ++ [p]) isDistinguishable pairOfStates
+-- |Find partitions by partitioning the different sets of states
+-- |in each set of partition take all possible pair od states
+calculateSet :: [[State]] -> [[State]] -> [Transition] -> [[State]] -> [[State]]
+calculateSet [] setOfSetsOfStatesCopy transitions newSet = newSet
+calculateSet (setOfStates:setOfSetsOfStates) setOfSetsOfStatesCopy transitions newSet
+  | length setOfStates == 1 =
+      calculateSet setOfSetsOfStates setOfSetsOfStatesCopy transitions (newSet ++ [setOfStates])
+  | otherwise = do
+      let set = newSet ++ takePairs statesSet setOfSetsOfStatesCopy transitions []
+      calculateSet setOfSetsOfStates setOfSetsOfStatesCopy transitions set
+  where
+    statesSet = [(x,y) | (x:rest) <- tails setOfStates, y <- rest, x /= y]
+
+
+-- |Check if two states of a set are distinguishable
+-- |set is split into different sets in partition
+takePairs :: [(State, State)] -> [[State]] -> [Transition] -> [[State]] -> [[State]]
+takePairs [] setOfSetsOfStates transitions partitions = partitions
+takePairs (pair:pairOfStates) setOfSetsOfStates transitions partitions =
+    takePairs pairOfStates setOfSetsOfStates transitions p
+    where
+      -- for every two states check what is their destination state
+      -- if destination state is in same set of states, states are indistinguishable
+      isDistinguishable = areIndistinguishable pair setOfSetsOfStates transitions
+      p = if statesExist pair partitions then partitions else editSet partitions isDistinguishable pair
+
+
+-- |Edit set of states
+editSet :: [[State]] -> Bool -> (State, State) -> [[State]]
+editSet partitions isIndistinguishable pairOfStates =
+  if index /= -1
+    then do
+      -- store partition to edit
+      let p = partitions!!index
+      -- remove set
+      let newP = take index partitions ++ drop (1 + index) partitions
+      -- add new state to set
+      newP ++ findPartition p isIndistinguishable pairOfStates
     else do
-      let n = newPartitions ++ [[(fst pairOfStates)]] ++ [[(snd pairOfStates)]]
-      editPartitions partitions n isDistinguishable pairOfStates
+      findPartition [] isIndistinguishable pairOfStates
+  where
+    k = map(\x -> elem (fst pairOfStates) x) partitions
+    index = if True `elem` k then fromJust $ elemIndex True k else -1
 
 
-areIndistinguishable :: (State, State) -> [State] -> [Transition] -> Bool
-areIndistinguishable pairOfStates setOfStates transitions = do
+-- |If two states of set are distinguishable, the set is split into different sets
+-- |otherwise it is added to existing partition
+findPartition :: [State] -> Bool -> (State, State) -> [[State]]
+findPartition p isIndistinguishable pairOfStates =
+  if isIndistinguishable then
+    if (fst pairOfStates) `elem` p
+      -- two states of set are indistinguishable
+      then [p ++ [(snd pairOfStates)]]
+      else do
+        if p == [] then [[(fst pairOfStates)] ++ [(snd pairOfStates)]] else [p]
+    else do
+      -- two states of set are distinguishable
+      if (fst pairOfStates) `elem` p
+        then [p] ++ [[(snd pairOfStates)]]
+        else [[(fst pairOfStates)]] ++ [[(snd pairOfStates)]]
+
+
+-- |Check if both states from pair are in partition
+statesExist :: (State, State) -> [[State]] -> Bool
+statesExist pairOfStates partitions = (stateExists (fst pairOfStates) partitions)
+  + (stateExists (snd pairOfStates) partitions) > 1
+  where
+    stateExists state set = length (filter (\p -> ((elem state p))) set)
+
+
+-- |Check if two state are indistinguishable
+areIndistinguishable :: (State, State) -> [[State]] -> [Transition] -> Bool
+areIndistinguishable pairOfStates setOfSetsOfStates transitions = do
   -- all transitions of first state
   let state1T = getTransitionsOfState (fst pairOfStates) transitions
   -- all transitions of second state
   let state2T = getTransitionsOfState (snd pairOfStates) transitions
   -- destination states with same input symbol
   let ds = [((dst t1), (dst t2)) | t1 <- state1T, t2 <- state2T, (symbol t1) == (symbol t2)]
-  isInSameSet ds setOfStates
+  isInSameSet ds setOfSetsOfStates
 
 
-isInSameSet :: [(State, State)] -> [State] -> Bool
-isInSameSet [] setOfStates = True
-isInSameSet (pair:destinationStates) setOfStates =
-  if (fst pair) `elem` setOfStates && (snd pair) `elem` setOfStates
-    then isInSameSet destinationStates setOfStates
-    else False
+-- |Destination states of two indistinguishable states is in same set of states (final or non-final)
+isInSameSet :: [(State, State)] -> [[State]] -> Bool
+isInSameSet [] setOfSetsOfStates = True
+isInSameSet (pair:destinationStates) setOfSetsOfStates = do
+  let ret = filter(\setOfStates -> (elem (fst pair) setOfStates && elem (snd pair) setOfStates)) setOfSetsOfStates
+  if ret == [] then False else isInSameSet destinationStates setOfSetsOfStates
 
 
 -- |Remove unreachable states from deterministic finite automaton

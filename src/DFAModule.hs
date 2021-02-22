@@ -7,7 +7,8 @@ module DFAModule(
   printDFA,
   isDFAValid,
   printTransitions,
-  getTransitionsOfState
+  getTransitionsOfState,
+  getSymbolsAndStates
 ) where
 
 import Data.Function
@@ -120,6 +121,15 @@ isDFAValid dfa =
   && checkTransitions (transitions dfa) (states dfa) (alphabet dfa)
 
 
+-- |Get transition where source state is "state"
 getTransitionsOfState :: State -> [Transition] -> [Transition]
 getTransitionsOfState state transitions =
     filter (\transition -> (state  == (src transition))) transitions
+
+
+
+getSymbolsAndStates :: [State] -> [Transition] -> [(Alphabet, State)] -> [(Alphabet, State)]
+getSymbolsAndStates [] transitions information = information
+getSymbolsAndStates (state:states) transitions information = do
+  let t = getTransitionsOfState state transitions
+  getSymbolsAndStates states transitions (information ++ [(symbol x, dst x) | x <- t])
