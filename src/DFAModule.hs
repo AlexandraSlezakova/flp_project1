@@ -4,11 +4,11 @@ module DFAModule(
   State,
   Alphabet,
   Sink,
+  StateMap,
   printDFA,
   isDFAValid,
   printTransitions,
-  getTransitionsOfState,
-  getSymbolsAndStates
+  getTransitionsOfState
 ) where
 
 import Data.Function
@@ -21,6 +21,8 @@ type State = String
 type Alphabet = String
 -- |synonym Sink for type String
 type Sink = String
+-- |synonym StateMap for the set of states and the corresponding new state
+type StateMap = [([State], Int)]
 
 
 -- |data structure for transitions
@@ -125,11 +127,3 @@ isDFAValid dfa =
 getTransitionsOfState :: State -> [Transition] -> [Transition]
 getTransitionsOfState state transitions =
     filter (\transition -> (state  == (src transition))) transitions
-
-
-
-getSymbolsAndStates :: [State] -> [Transition] -> [(Alphabet, State)] -> [(Alphabet, State)]
-getSymbolsAndStates [] transitions information = information
-getSymbolsAndStates (state:states) transitions information = do
-  let t = getTransitionsOfState state transitions
-  getSymbolsAndStates states transitions (information ++ [(symbol x, dst x) | x <- t])

@@ -28,41 +28,68 @@ minimizeDFA dfa = do
   let finalStatesSet = (acceptStates completeDFA)
   let nonFinalStatesSet = (states completeDFA) \\ finalStatesSet
   let newStates = createStates [] ([finalStatesSet] ++ [nonFinalStatesSet]) (transitions completeDFA)
-  createTransitions newStates [] completeDFA
+
   --putStrLn $ show m
   --createReducesDFA completeDFA
+  reduceDFA newStates completeDFA
 
   putStrLn "tu"
 
   --printDFA completeDFA
 
-createTransitionInit :: [[State]] -> DFAStruct -> [Transition]
-createTransitionInit states completeDFA = do
-  -- initial state
-  let initialState = concat (filter (\x -> ((startState completeDFA) `elem` x)) states)
-  let m = getSymbolsAndStates initialState (transitions completeDFA) []
-  putStrLn $ show m
-  let k = getTransitions m [] initialState
-  let o = head (filter (\x -> ((snd x) `elem` initialState)) k)
-  let dstState = (snd o)
-  let symbol = (fst o)
+reduceDFA :: [[State]] -> DFAStruct -> IO()
+reduceDFA mdfaState completeDFA = do
+  -- original initial state
+  let initialState = concat (filter (\x -> ((startState completeDFA) `elem` x)) mdfaState)
+  -- set of states and the corresponding new state
+  let stateMap = [(initialState, 0)]
+  let initStateT = getTransitionsOfState (startState completeDFA) (transitions completeDFA)
+  -- create first transition for initial state
+  let stateMapT = createTransition initStateT [] mdfaState stateMap
+  --printTransitions (snd stateMapT)
+  let newTransitions = createTransitions (transitions completeDFA) mdfaState stateMapT []
+  let finalStates = snd (head (filter (\x -> ((head (acceptStates completeDFA) `elem` (fst x)))) (fst newTransitions)))
+  --createTransitions (transitions completeDFA) mdfaState stateMapT []
+  --createTransitions (transitions completeDFA) states s []
+  --putStrLn $ show states
+  --putStrLn $ show m
+  putStrLn "finalStates"
+  print finalStates
+  printTransitions (snd newTransitions)
+  putStrLn "symbol"
 
-createTransitions :: [[State]] -> [Transition] -> DFAStruct -> IO()
-createTransitions states tr completeDFA = do
-  -- if transitions == []
-  --   then do
+createTransitions :: [Transition] -> [[State]] -> (StateMap, [Transition]) -> [Transition] -> (StateMap, [Transition])
+createTransitions originalT mdfaState stateMapT newT
+  | length (fst stateMapT) < length mdfaState = createTransitions originalT mdfaState stateMapTr newTr
+  | otherwise = ((fst stateMapT), (newTr ++ (snd stateMapTr)))
+  where
+    state = head (fst (last (fst stateMapT)))
+    newTr = newT ++ (snd stateMapT)
+    -- get transitions of next state
+    t = getTransitionsOfState state originalT
+    -- create transitions for next state
+    stateMapTr = createTransition t [] mdfaState (fst stateMapT)
 
-  --putStrLn $ show k
-  putStrLn $ show states
-  putStrLn "tu1"
 
-
-getTransitions :: [(Alphabet, State)] -> [(Alphabet, State)] -> [State] -> [(Alphabet, State)]
-getTransitions [] newInfo states = newInfo
-getTransitions (info:information) newInfo states = do
-  let x = filter (\i -> ((fst i) == (fst info))) information
-  --when (x == []) $ newInfo
-  getTransitions information (newInfo ++ x) states
+createTransition :: [Transition] -> [Transition] -> [[State]] -> StateMap -> (StateMap, [Transition])
+createTransition [] newT newStates states = (states, newT)
+createTransition (t:transitions) newT newStates states = do
+  let state = filter (\s -> (elem (dst t) (fst s))) states
+  if state == []
+    then do
+      -- if new state is not in set of states, take last one and increment its value
+      let lastState = if length states == 1 then head states else head (tail states)
+      let newStateNum = (snd lastState) + 1
+      -- get set of states of minimized DFA
+      let s = concat (filter (\x -> ((dst t) `elem` x)) newStates)
+      -- create new transition from last state
+      let newTr = [Transition (show (snd lastState)) (symbol t) (show newStateNum)]
+      createTransition transitions (newT ++ newTr) newStates (states ++ [(s, newStateNum)])
+    else do
+      -- loop over same state
+      let stateNum = (snd (head state))
+      let newTr = [Transition (show stateNum) (symbol t) (show stateNum)]
+      createTransition transitions (newT ++ newTr) newStates states
 
 
 -- |Create states of minimal deterministic finite automaton
@@ -202,11 +229,11 @@ isComplete transitions states alphabet
     -- all possible transitions for every symbol from set of input symbols
     allT states alphabet = [(x, y) | x <- states, y <- chunksOf 1 alphabet]
     -- existing transitions
-    existingT transitions = map (\transition -> ((src transition),(symbol transition)))(transitions)
+    existingT transitions = [((src t),(symbol t)) | t <- transitions]
     -- missing transitions
     missingT transitions states alphabet = (allT states alphabet) \\ (existingT transitions)
     -- create transitions with sink state represented as x
-    createSinkStateT missingT = map (\t -> Transition (fst t) (snd t) "x") missingT
+    createSinkStateT missingT = [Transition (fst t) (snd t) "x" | t <- missingT]
 
 
 -- |For every state from set find transition
