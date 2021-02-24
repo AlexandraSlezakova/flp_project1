@@ -11,14 +11,14 @@ GREEN=$'\e[0;32m'
 
 print_dka()
 {
-  echo "---------------------------------------------------------"
-  echo -e "${BPur}Tests with correctly written Deterministic finite automata${NC}"
-  echo "---------------------------------------------------------"
+  echo "----------------------------------------------------------"
+  echo -e "${BPur}Tests with correctly written deterministic finite automata${NC}"
+  echo "----------------------------------------------------------"
   for ((i = 0 ; i < 6; i++)); do
         echo "File: test0${i}.in"
-        CMD="../dka-2-mka -i test0${i}.in"
+        CMD="../dka-2-mka -i correct_dfa/test0${i}.in"
         eval OUTPUT=\$\($CMD\)
-        if [[ $(< "test0${i}".out) != "$OUTPUT" ]]; then
+        if [[ $(< "correct_dfa/test0${i}".out) != "$OUTPUT" ]]; then
           echo -e "Result: ${RED}the program output and the required output are different${NC}"
         else
           echo "Result: ${GREEN}OK${NC}"
@@ -30,10 +30,10 @@ print_dka()
 
   done
 
-  echo "---------------------------------------------------------"
+  echo "------------------------------------------------------------"
   echo -e "${BPur}Tests with incorrectly written deterministic finite automata${NC}"
-  echo "---------------------------------------------------------"
-  SUBSTRING='Invalid input'
+  echo "------------------------------------------------------------"
+  SUBSTRING='error'
   errors=("Input symbol on transition is not in alpabet"
           "Transition with epsilon"
           "Accept state is not in set of states"
@@ -42,13 +42,17 @@ print_dka()
           "Destination state of transition is not in set of states"
           "No destination state of transition"
           "No source state of transition"
-          "Accept states are not in set od states"
+          "Accept states are not in set of states"
           "Alphabet contains number"
           "Aplhabet contains uppercase letter"
           "Set of states contains letter"
-          "Negative number in set of states")
+          "Negative number in set of states"
+          "No initial state"
+          "Empty set of accept states"
+          "Duplicates in set of states"
+          "Duplicates in set of transitions")
 
-  for ((i = 0 ; i < 13; i++)); do
+  for ((i = 0 ; i < 17; i++)); do
         if [[ ${i} -gt 9 ]]; then
           INDEX="${i}"
         else
@@ -56,16 +60,16 @@ print_dka()
         fi
 
         echo "File: test${INDEX}-bad.in"
-        CMD="../dka-2-mka -i test${INDEX}-bad.in 2>&1"
+        CMD="../dka-2-mka -i correct_dfa/test${INDEX}-bad.in 2>&1"
         eval OUTPUT=\$\($CMD\)
         if [[ "$OUTPUT" == *"$SUBSTRING"* ]]; then
-          echo "Result: ${GREEN}OK${NC}"
+          echo "Result: ${GREEN}OK - error found${NC}"
         else
           echo -e "Result: ${RED}no error was found in the deterministic finite automata ${NC}"
         fi
         echo "Error: ${errors[$i]}"
 
-        if [[ ${i} -lt 12 ]]; then
+        if [[ ${i} -lt 16 ]]; then
           echo "----------------"
         fi
 
@@ -76,7 +80,7 @@ help()
 {
     echo "Usage: ./tester.sh [OPTION]"
     echo -e "\t-i test correctness of saving DKA to custom representation and print it to stdout"
-    echo -e "\t-t print MKA to stdout"
+    echo -e "\t-t create and print MKA to stdout"
 }
 
 if [ -z "$1" ]; then
@@ -90,7 +94,7 @@ if [ "$1" == "--help" ]; then
 elif [ "$1" == "-i" ]
 then
     print_dka
-elif [ "$2" == "-t" ]
+elif [ "$1" == "-t" ]
 then
     echo "este nie je"
 fi

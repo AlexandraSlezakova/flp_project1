@@ -26,7 +26,8 @@ main = do
         content <- getContent args
         let dfa = parseContent $ lines content
 
-        when (not $ isDFAValid dfa) $ error "Error: Invalid input"
+        let err = isDFAValid dfa
+        when (err /= "") $ error err
 
         case (head args) of
           "-i" -> printDFA dfa

@@ -14,6 +14,7 @@ module DFAModule(
 import Data.Function
 import Data.Char
 import Data.List
+import Control.Monad
 
 -- |synonym State for type String
 type State = String
@@ -53,7 +54,7 @@ printDFA dfa = do
   -- start state
   putStrLn $ startState dfa
   -- accept states
-  putStrLn $ intercalate "," $ acceptStates dfa
+  when ((acceptStates dfa) /= []) $ putStrLn $ intercalate "," $ acceptStates dfa
   -- transitions
   printTransitions $ transitions dfa
 
@@ -79,7 +80,7 @@ isAlphabetValid (x:xs) =
   if x `elem` ['a'..'z'] then isAlphabetValid xs else False
 
 
--- |Check if start state is valid
+-- |Check if start state is digit and is in set of states
 isStartStateValid :: State -> [State] -> Bool
 isStartStateValid s states = all isDigit s && s `elem` states
 
@@ -113,14 +114,44 @@ isTransitionValid transition states alphabet = do
     else False
 
 
+-- |Check if set of states has unique values
+hasUniqueState :: [State] -> Bool
+hasUniqueState [] = True
+hasUniqueState (s:states) = s `notElem` states && hasUniqueState states
+
+
+-- |Check if set of transitions has unique values
+hasUniqueTransitions :: [Transition] -> Bool
+hasUniqueTransitions [] = True
+hasUniqueTransitions (t:transitions) = t `notElem` transitions && hasUniqueTransitions transitions
+
+
 -- |Check if automaton is valid
-isDFAValid :: DFAStruct -> Bool
-isDFAValid dfa =
-  isSetOfStatesValid (states dfa)
-  && isAlphabetValid (alphabet dfa)
-  && isStartStateValid (startState dfa) (states dfa)
-  && checkAcceptStates (acceptStates dfa) (states dfa)
-  && checkTransitions (transitions dfa) (states dfa) (alphabet dfa)
+isDFAValid :: DFAStruct -> String
+isDFAValid dfa = do
+  if (states dfa) == [""] || (states dfa) == []
+    then "Error: Empty set of states"
+    else if (acceptStates dfa) == [""] || (acceptStates dfa) == []
+      then "Error: Empty set of accept states"
+    else if (alphabet dfa) == ""
+      then "Error: Empty alphabet"
+    else if not $ isSetOfStatesValid (states dfa)
+      then "Error: Invalid set of states"
+    else if not $ isAlphabetValid (alphabet dfa)
+      then "Error: Invalid alphabet"
+    else if not $ isStartStateValid (startState dfa) (states dfa)
+      then "Error: Invalid initial state"
+    else if not $ checkAcceptStates (acceptStates dfa) (states dfa)
+      then "Error: Invalid accept states"
+    else if not $ hasUniqueState (states dfa)
+      then "Error: Duplicates in set of states"
+    else if not $ hasUniqueState (acceptStates dfa)
+      then "Error: Duplicates in set of accept states"
+    else if not $ checkTransitions (transitions dfa) (states dfa) (alphabet dfa)
+      then "Error: Invalid transitions"
+    else if not $ hasUniqueTransitions (transitions dfa)
+      then "Error: Duplicates in set of transitions"
+    else ""
 
 
 -- |Get transition where source state is "state"
