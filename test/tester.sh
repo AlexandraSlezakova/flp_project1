@@ -1,22 +1,24 @@
 #!/usr/bin/env bash
 #title         : tester.sh
 #description   : Test correctness of dka-2-mka.hs
-#author        : Alexandra Slezakova
+#author        : Alexandra Slezakova (xsleza20)
+#Year          : 2021
 #usage         : ./tester [OPTION] see --help
-#==============================================================================
+#=================================================
+
 RED='\033[0;31m'
 BPur='\e[1;35m';
 NC=$'\e[0m'
 GREEN=$'\e[0;32m'
 
-print_dka()
+print_dfa()
 {
   echo "----------------------------------------------------------"
   echo -e "${BPur}Tests with correctly written deterministic finite automata${NC}"
   echo "----------------------------------------------------------"
   for ((i = 0 ; i < 6; i++)); do
         echo "File: test0${i}.in"
-        CMD="../dka-2-mka -i correct_dfa/test0${i}.in"
+        CMD="${FILE} -i correct_dfa/test0${i}.in"
         eval OUTPUT=\$\($CMD\)
         if [[ $(< "correct_dfa/test0${i}".out) != "$OUTPUT" ]]; then
           echo -e "Result: ${RED}the program output and the required output are different${NC}"
@@ -60,7 +62,7 @@ print_dka()
         fi
 
         echo "File: test${INDEX}-bad.in"
-        CMD="../dka-2-mka -i correct_dfa/test${INDEX}-bad.in 2>&1"
+        CMD="${FILE} -i correct_dfa/test${INDEX}-bad.in 2>&1"
         eval OUTPUT=\$\($CMD\)
         if [[ "$OUTPUT" == *"$SUBSTRING"* ]]; then
           echo "Result: ${GREEN}OK - error found${NC}"
@@ -76,12 +78,71 @@ print_dka()
   done
 }
 
+reduce_dfa()
+{
+  echo "-----------------------------------------------------------------------"
+  echo -e "${BPur}Minimization of DFA - tests with complete deterministic finite automata${NC}"
+  echo "-----------------------------------------------------------------------"
+  for ((i = 0 ; i < 16; i++)); do
+    if [[ ${i} -gt 9 ]]; then
+      INDEX="${i}"
+    else
+      INDEX="0${i}"
+    fi
+
+    echo "File: test${INDEX}.in"
+    CMD="${FILE} -t reduced_dfa/complete_dfa/test${INDEX}.in"
+    eval OUTPUT=\$\($CMD\)
+    if [[ $(< "reduced_dfa/complete_dfa/test${INDEX}".out) != "$OUTPUT" ]]; then
+      echo -e "Result: ${RED}the program output and the required output are different${NC}"
+    else
+      echo "Result: ${GREEN}OK${NC}"
+    fi
+
+    if [[ ${i} -lt 15 ]]; then
+      echo "----------------"
+    fi
+  done
+
+
+  echo "-------------------------------------------------------------------------"
+  echo -e "${BPur}Minimization of DFA - tests with incomplete deterministic finite automata${NC}"
+  echo "-------------------------------------------------------------------------"
+  for ((i = 0 ; i < 7; i++)); do
+    if [[ ${i} -gt 9 ]]; then
+      INDEX="${i}"
+    else
+      INDEX="0${i}"
+    fi
+
+    echo "File: test${INDEX}.in"
+    CMD="${FILE} -t reduced_dfa/incomplete_dfa/test${INDEX}.in"
+    eval OUTPUT=\$\($CMD\)
+    if [[ $(< "reduced_dfa/incomplete_dfa/test${INDEX}".out) != "$OUTPUT" ]]; then
+      echo -e "Result: ${RED}the program output and the required output are different${NC}"
+    else
+      echo "Result: ${GREEN}OK${NC}"
+    fi
+
+    if [[ ${i} -lt 6 ]]; then
+      echo "----------------"
+    fi
+
+  done
+}
+
 help()
 {
     echo "Usage: ./tester.sh [OPTION]"
-    echo -e "\t-i test correctness of saving DKA to custom representation and print it to stdout"
+    echo -e "\t-i test correctness of saving DKA to the internal representation and print it to stdout"
     echo -e "\t-t create and print MKA to stdout"
 }
+
+FILE=../dka-2-mka
+if [ ! -f "$FILE" ]; then
+    echo "Error: Executable file $FILE doesn't exist."
+    exit 0
+fi
 
 if [ -z "$1" ]; then
     help
@@ -93,8 +154,8 @@ if [ "$1" == "--help" ]; then
    exit 0
 elif [ "$1" == "-i" ]
 then
-    print_dka
+    print_dfa
 elif [ "$1" == "-t" ]
 then
-    echo "este nie je"
+    reduce_dfa
 fi
