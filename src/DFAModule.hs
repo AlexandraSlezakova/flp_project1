@@ -61,7 +61,7 @@ printDFA dfa = do
   -- start state
   putStrLn $ startState dfa
   -- accept states
-  when ((acceptStates dfa) /= []) $ putStrLn $ intercalate "," $ acceptStates dfa
+  when (acceptStates dfa /= []) $ putStrLn $ intercalate "," $ acceptStates dfa
   -- transitions
   printTransitions $ transitions dfa
 
@@ -76,15 +76,12 @@ printTransitions (transition:transitions) = do
 
 -- |Check if state contains only digits
 isSetOfStatesValid :: [State] -> Bool
-isSetOfStatesValid [] = True
-isSetOfStatesValid (x:xs) = if all isDigit x then isSetOfStatesValid xs else False
+isSetOfStatesValid = foldr ((&&) . all isDigit) True
 
 
 -- |Check if alphabet contains lower letters
 isAlphabetValid :: Alphabet -> Bool
-isAlphabetValid [] = True
-isAlphabetValid (x:xs) =
-  if x `elem` ['a'..'z'] then isAlphabetValid xs else False
+isAlphabetValid = foldr (\ x -> (&&) (x `elem` ['a' .. 'z'])) True
 
 
 -- |Check if start state is digit and is in set of states
@@ -94,31 +91,22 @@ isStartStateValid s states = all isDigit s && s `elem` states
 
 -- |Check if accept state exists in set of states
 checkAcceptStates :: [State] -> [State] -> Bool
-checkAcceptStates [] states = True
-checkAcceptStates (state:acceptStates) states  =
-  if state `elem` states then checkAcceptStates acceptStates states else False
+checkAcceptStates acceptStates states = foldr (\ state -> (&&) (state `elem` states)) True acceptStates
 
 
 -- |Check if all transitions are valid
 checkTransitions :: [Transition] -> [State] -> Alphabet -> Bool
-checkTransitions [] states alphabet = True
-checkTransitions (transition:transitions) states alphabet =
-  if isTransitionValid transition states alphabet
-    then checkTransitions transitions states alphabet
-    else False
+checkTransitions transitions states alphabet
+  = foldr (\ transition -> (&&) (isTransitionValid transition states alphabet)) True transitions
 
 
 -- |Check if transition is valid:
 -- |if source and destination state exist in set of states
 -- |and if alphabet contains input symbol
 isTransitionValid :: Transition -> [State] -> Alphabet -> Bool
-isTransitionValid transition states alphabet = do
-  if (src transition) `elem` states
-    && isInfixOf (symbol transition) alphabet
-    && (not $ null (symbol transition))
-    && (dst transition) `elem` states
-    then True
-    else False
+isTransitionValid transition states alphabet =
+  src transition `elem` states && isInfixOf (symbol transition) alphabet &&
+    not (null (symbol transition)) && dst transition `elem` states
 
 
 -- |Check if set of states has unique values
@@ -135,33 +123,33 @@ hasUniqueTransitions (t:transitions) = t `notElem` transitions && hasUniqueTrans
 
 -- |Check if automaton is valid
 isDFAValid :: DFAStruct -> String
-isDFAValid dfa = do
-  if (states dfa) == [""] || (states dfa) == []
-    then "Error: Empty set of states"
-    else if (acceptStates dfa) == [""] || (acceptStates dfa) == []
-      then "Error: Empty set of accept states"
-    else if (alphabet dfa) == ""
-      then "Error: Empty alphabet"
-    else if not $ isSetOfStatesValid (states dfa)
-      then "Error: Invalid set of states"
-    else if not $ isAlphabetValid (alphabet dfa)
-      then "Error: Invalid alphabet"
-    else if not $ isStartStateValid (startState dfa) (states dfa)
-      then "Error: Invalid initial state"
-    else if not $ checkAcceptStates (acceptStates dfa) (states dfa)
-      then "Error: Invalid accept states"
-    else if not $ hasUniqueState (states dfa)
-      then "Error: Duplicates in set of states"
-    else if not $ hasUniqueState (acceptStates dfa)
-      then "Error: Duplicates in set of accept states"
-    else if not $ checkTransitions (transitions dfa) (states dfa) (alphabet dfa)
-      then "Error: Invalid transitions"
-    else if not $ hasUniqueTransitions (transitions dfa)
-      then "Error: Duplicates in set of transitions"
-    else ""
+isDFAValid dfa
+  | states dfa == [""] || null (states dfa) =
+      "Error: Empty set of states"
+  | acceptStates dfa == [""] || null (acceptStates dfa) =
+      "Error: Empty set of accept states"
+  | alphabet dfa == "" =
+      "Error: Empty alphabet"
+  | not $ isSetOfStatesValid (states dfa) =
+      "Error: Invalid set of states"
+  | not $ isAlphabetValid (alphabet dfa) =
+      "Error: Invalid alphabet"
+  | not $ isStartStateValid (startState dfa) (states dfa) =
+      "Error: Invalid initial state"
+  | not $ checkAcceptStates (acceptStates dfa) (states dfa) =
+      "Error: Invalid accept states"
+  | not $ hasUniqueState (states dfa) =
+      "Error: Duplicates in set of states"
+  | not $ hasUniqueState (acceptStates dfa) =
+      "Error: Duplicates in set of accept states"
+  | not $ checkTransitions (transitions dfa) (states dfa) (alphabet dfa) =
+      "Error: Invalid transitions"
+  | not $ hasUniqueTransitions (transitions dfa) =
+      "Error: Duplicates in set of transitions"
+  | otherwise = ""
 
 
 -- |Get transition where source state is "state"
 getTransitionsOfState :: State -> [Transition] -> [Transition]
-getTransitionsOfState state transitions =
-    filter (\transition -> (state  == (src transition))) transitions
+getTransitionsOfState state
+    = filter (\transition -> state == src transition)
