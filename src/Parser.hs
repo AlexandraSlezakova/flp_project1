@@ -1,4 +1,12 @@
-module Parser(
+{-|
+Project     : VUT FIT FLP Project 1 - DKA-2-MKA
+Author      : Alexandra Slezakova (xsleza20)
+Year        : 2021
+Module      : Parser
+Description : An input parser
+-}
+
+module Parser (
   parseContent
 ) where
 

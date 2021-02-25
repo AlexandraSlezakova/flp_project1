@@ -1,3 +1,10 @@
+{-|
+Project     : VUT FIT FLP Project 1 - DKA-2-MKA
+Author      : Alexandra Slezakova (xsleza20)
+Year        : 2021
+File        : dka-2-mka.hs
+-}
+
 import System.Environment
 import System.Directory
 import Data.Char
@@ -10,10 +17,7 @@ import DFAModule
 
 -- |Read user input or file content
 getContent :: [String] -> IO String
-getContent args = do
-  if length args == 1
-    then getContents
-    else readFile $ head $ tail args
+getContent args =  if length args == 1 then getContents else readFile $ head $ tail args
 
 
 main :: IO ()
@@ -29,7 +33,7 @@ main = do
         let err = isDFAValid dfa
         when (err /= "") $ error err
 
-        case (head args) of
+        case head args of
           "-i" -> printDFA dfa
           "-t" -> minimizeDFA dfa
-          otherwise -> error "Error: Unknown option"
+          _ -> error "Error: Unknown option"

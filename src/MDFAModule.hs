@@ -1,8 +1,8 @@
 {-|
-Project     :
-Author      :
-Year        :
-Module      : DFAModule
+Project     : VUT FIT FLP Project 1 - DKA-2-MKA
+Author      : Alexandra Slezakova (xsleza20)
+Year        : 2021
+Module      : MDFAModule
 Description : An implementation of the minimization of deterministic finite automaton
 
 The implementation is realised in 3 steps according to algorithms from TIN scripts:
@@ -23,112 +23,104 @@ import Parser
 
 
 minimizeDFA :: DFAStruct -> IO()
-minimizeDFA dfa = do
-  if (transitions dfa) == []
-    then do
-      let aut = DFAStruct {
-        states        = ["0"],
-        alphabet      = (alphabet dfa),
-        startState    = "0",
-        acceptStates  = [],
-        transitions   = []
-      }
-      printDFA aut
-    else do
-      let completeDFA = removeUnreachableStates dfa
-      --removeUnreachableStates dfa
-
-      let finalStatesSet = (acceptStates completeDFA)
-      let nonFinalStatesSet = (states completeDFA) \\ finalStatesSet
-
-      let mdfaStates = createStates [] ([finalStatesSet] ++ [nonFinalStatesSet]) (transitions completeDFA)
-      putStrLn $ show mdfaStates
-      let k = removeSinkState mdfaStates []
-      let t = removeSinkStateT (transitions completeDFA)
-      -- printTransitions (transitions completeDFA)
-      -- putStrLn "-------------------------"
-      -- printTransitions t
-      -- putStrLn "-------------------------"
-      -- putStrLn $ show k
-      -- putStrLn "completeDFA"
-      -- printDFA completeDFA
-
-      reduceDFA k t completeDFA
-
-      putStrLn "tu"
-
-  --printDFA completeDFA
-
-removeSinkStateT :: [Transition] -> [Transition]
-removeSinkStateT transitions = filter (\transition -> ((dst transition) /= "x")) transitions
+minimizeDFA dfa
+  | (transitions dfa) == [] = printDFA (createEmptyDKA (alphabet dfa))
+  | otherwise = printDFA (reduceDFA removedSink tr completeDFA)
+  where
+    -- remove unreachable states
+    completeDFA = removeUnreachableStates dfa
+    -- set of final states
+    finalStatesSet = (acceptStates completeDFA)
+    -- set of non-final states
+    nonFinalStatesSet = (states completeDFA) \\ finalStatesSet
+    -- new states of minimal DFA
+    mdfaStates = createStates [] ([finalStatesSet] ++ [nonFinalStatesSet]) (transitions completeDFA)
+    -- set with sink state is removed
+    removedSink = removeSinkState mdfaStates []
+    diff = mdfaStates \\ removedSink
+    tr = if diff == []
+          then (transitions completeDFA)
+          else removeSinkStateT (transitions completeDFA) [] diff
 
 
+-- |Create empty DFA when no transitions are as an input
+createEmptyDKA :: Alphabet -> DFAStruct
+createEmptyDKA alphabet = DFAStruct {
+  states        = ["0"],
+  alphabet      = alphabet,
+  startState    = "0",
+  acceptStates  = [],
+  transitions   = []
+}
+
+
+-- |Remove transitions to sink state
+removeSinkStateT :: [Transition] -> [Transition] -> [[State]] -> [Transition]
+removeSinkStateT transitions newT [] = newT
+removeSinkStateT transitions newT (states:sinkStates) =
+  newT ++ (filter (\t -> (((notElem (src t) states) && (notElem (dst t) states)))) transitions)
+
+
+-- |Remove sink state from set of states of minimal DFA
 removeSinkState :: [[State]] -> [[State]] -> [[State]]
 removeSinkState [] removedSink = removedSink
 removeSinkState (set:setOfSetsOfStates) removedSink
-  | "x" `elem` set = removeSinkState setOfSetsOfStates (removedSink ++ [noSinkState])
+  | "x" `elem` set = removeSinkState setOfSetsOfStates removedSink
   | otherwise = removeSinkState setOfSetsOfStates (removedSink ++ [set])
   where
     index = fromJust $ elemIndex "x" set
     noSinkState = (take index set ++ drop (1 + index) set)
 
 
-reduceDFA :: [[State]] -> [Transition] -> DFAStruct -> IO()
-reduceDFA mdfaStates transitions completeDFA = do
+-- |Minimize the given DFA
+reduceDFA :: [[State]] -> [Transition] -> DFAStruct -> DFAStruct
+reduceDFA mdfaStates transitions completeDFA = DFAStruct {
+  states        = sort [show (snd x) | x <- (fst newST)],
+  alphabet      = (alphabet completeDFA),
+  startState    = "0",
+  acceptStates  = getAcceptStates (fst newST) (acceptStates completeDFA) [],
+  transitions   = (snd stateMapT) ++ (snd newST)
+ }
+ where
   -- original initial state
-  let initialState = concat (filter (\x -> ((startState completeDFA) `elem` x)) mdfaStates)
-  putStrLn "original"
-  printTransitions transitions
+  initialState = concat (filter (\x -> ((startState completeDFA) `elem` x)) mdfaStates)
   -- set of states and the corresponding new state
-  let stateMap = [(initialState, 0)]
-  let initStateT = getTransitionsOfState (startState completeDFA) transitions
+  stateMap = [(initialState, 0)]
+  initStateT = getTransitionsOfState (startState completeDFA) transitions
   -- create first transition for initial state
-  let stateMapT = createTransition initStateT [] mdfaStates stateMap
-  putStrLn "stateMapT"
-  printTransitions (snd stateMapT)
-  let newT = createTransitions transitions mdfaStates stateMapT []
-  let finalStates = snd (head (filter (\x -> ((head (acceptStates completeDFA) `elem` (fst x)))) (fst newT)))
-  --createTransitions transitions mdfaStates stateMapT []
-  putStrLn "-------------------------"
-  putStrLn $ show (fst newT)
-  --putStrLn $ show m
-  putStrLn "finalStates"
-  --print finalStates
-  putStrLn "-------------------------"
-  printTransitions (snd newT)
-  putStrLn "symbol"
+  stateMapT = createTransition initStateT [] mdfaStates stateMap
+  difference = (fst stateMapT) \\ stateMap
+  -- transitions and map of states of minimal DFA
+  newST = createTransitions transitions mdfaStates stateMapT difference []
 
 
-createTransitions :: [Transition] -> [[State]] -> (StateMap, [Transition]) -> [Transition] -> (StateMap, [Transition])
-createTransitions originalT mdfaState stateMapT newT
-  | length (fst stateMapT) < length mdfaState = createTransitions originalT mdfaState stateMapTr newTr
-  | otherwise = ((fst stateMapT), (newTr ++ (snd stateMapTr)))
+-- |Get numbers of accept states in minimal DFA
+getAcceptStates :: StateMap -> [State] -> [State] -> [State]
+getAcceptStates stateMap [] set = (sort set)
+getAcceptStates stateMap (state:acceptStates) set
+  | number `elem` set = getAcceptStates stateMap acceptStates set
+  | otherwise = getAcceptStates stateMap acceptStates (set ++ [number])
   where
-    state = head (fst (last (fst stateMapT)))
-    newTr = newT ++ (snd stateMapT)
-    -- get transitions of next state
-    t = getTransitionsOfState state originalT
-    -- create transitions for next state
-    stateMapTr = createTransition t [] mdfaState (fst stateMapT)
--- createTransitions :: [Transition] -> [[State]] -> (StateMap, [Transition]) -> [Transition] -> IO()
--- createTransitions originalT mdfaState stateMapT newT = do
---   let state = head (fst (last (fst stateMapT)))
---   let newTr = newT ++ (snd stateMapT)
---   -- get transitions of next state
---   let t = getTransitionsOfState state originalT
---   -- create transitions for next state
---   createTransition t [] mdfaState (fst stateMapT)
---   -- if length (fst stateMapT) < length mdfaState
---   --   then createTransitions originalT mdfaState stateMapTr newTr
---   --   else ((fst stateMapT), (newTr ++ (snd stateMapTr)))
---   putStrLn "-------------------------"
+    number = show (snd (head (filter (\x -> (state `elem` (fst x))) stateMap)))
 
 
+-- |Create transitions for every state
+createTransitions :: [Transition] -> [[State]] -> (StateMap, [Transition]) -> StateMap -> [Transition] -> (StateMap, [Transition])
+createTransitions originalT mdfaState stateMapT [] newT = ((fst stateMapT), newT)
+createTransitions originalT mdfaState stateMapT (state:states) newT = do
+  let s = head (fst state)
+  -- get transitions of next state
+  let t = getTransitionsOfState s originalT
+  -- create transitions for next state
+  let stateMapTr = createTransition t [] mdfaState (fst stateMapT)
+  let difference = (fst stateMapTr) \\ (fst stateMapT)
+  createTransitions originalT mdfaState stateMapTr (states ++ difference) (newT ++ (snd stateMapTr))
 
 
+-- |Create transition from destination state to source state in minimal DFA
 createTransition :: [Transition] -> [Transition] -> [[State]] -> StateMap -> (StateMap, [Transition])
-createTransition [] newT newStates states = (states, newT)
-createTransition (t:transitions) newT newStates states = do
+createTransition [] newT mdfaState states = (states, newT)
+createTransition (t:transitions) newT mdfaState states = do
   let dstState = filter (\s -> (elem (dst t) (fst s))) states
   let srcNum = head (filter (\s -> (elem (src t) (fst s))) states)
 
@@ -138,15 +130,14 @@ createTransition (t:transitions) newT newStates states = do
       let lastState = if length states == 1 then head states else last states
       let newStateNum = (snd lastState) + 1
       -- get set of states of minimized DFA
-      let s = concat (filter (\x -> ((dst t) `elem` x)) newStates)
+      let s = concat (filter (\x -> ((dst t) `elem` x)) mdfaState)
       -- create new transition from last state
       let newTr = [Transition (show (snd srcNum)) (symbol t) (show newStateNum)]
-      createTransition transitions (newT ++ newTr) newStates (states ++ [(s, newStateNum)])
+      createTransition transitions (newT ++ newTr) mdfaState (states ++ [(s, newStateNum)])
     else do
       let dstNum = (snd (head dstState))
-
       let newTr = [Transition (show (snd srcNum)) (symbol t) (show dstNum)]
-      createTransition transitions (newT ++ newTr) newStates states
+      createTransition transitions (newT ++ newTr) mdfaState states
 
 
 -- |Create states of minimal deterministic finite automaton
@@ -156,21 +147,6 @@ createStates oldSet setOfSetsOfStates transitions
   | otherwise = createStates s s transitions
   where
     s = calculateSet setOfSetsOfStates setOfSetsOfStates transitions []
--- createStates :: [[State]] -> [[State]] -> [Transition] -> IO()
--- createStates oldSet setOfSetsOfStates transitions = do
---
---   calculateSet setOfSetsOfStates setOfSetsOfStates transitions []
---   putStrLn "calculateSet--------------"
---   -- putStrLn $ show s
---   -- if oldSet == s
---   --   then do
---   --     putStrLn "rovnake--------------"
---   --     putStrLn $ show s
---   --   else do
---   --     createStates s s transitions
---   --     putStrLn "znovu--------------"
-
-
 
 
 -- |Find partitions by partitioning the different sets of states
@@ -186,26 +162,6 @@ calculateSet (setOfStates:setOfSetsOfStates) setOfSetsOfStatesCopy transitions n
   where
     statesSet = [(x,y) | (x:rest) <- tails setOfStates, y <- rest, x /= y]
 
--- calculateSet :: [[State]] -> [[State]] -> [Transition] -> [[State]] -> IO()
--- calculateSet [] setOfSetsOfStatesCopy transitions newSet = putStrLn "koniec"
--- calculateSet (setOfStates:setOfSetsOfStates) setOfSetsOfStatesCopy transitions newSet = do
---   let statesSet = [(x,y) | (x:rest) <- tails setOfStates, y <- rest, x /= y]
---   --putStrLn $ show statesSet
---   putStrLn $ show setOfSetsOfStatesCopy
---   if length setOfStates == 1
---     then do
---       calculateSet setOfSetsOfStates setOfSetsOfStatesCopy transitions (newSet ++ [setOfStates])
---       putStrLn "calculateSet"
---     else do
---       --let set = newSet ++ takePairs statesSet setOfSetsOfStatesCopy transitions []
---       takePairs statesSet setOfSetsOfStatesCopy transitions []
---       --putStrLn $ show setOfSetsOfStatesCopy
---       calculateSet setOfSetsOfStates setOfSetsOfStatesCopy transitions newSet
---       putStrLn "else"
---
---   putStrLn "calculateSet2"
-
-
 
 -- |Check if two states of a set are distinguishable
 -- |set is split into different sets in partition
@@ -220,48 +176,18 @@ takePairs (pair:pairOfStates) setOfSetsOfStates transitions partitions =
       -- filter set in which pair is
       pairInSet = filter(\setOfStates -> (elem (fst pair) setOfStates && elem (snd pair) setOfStates)) partitions
       isState = statesExist pair partitions
-      noSink = "x" `notElem` pair
-      p = if isDistinguishable && isState && pairInSet == [] && noSink
+      p = if isDistinguishable && isState && pairInSet == []
             then concatPairSets pair partitions
             else if isState then partitions
             else editSet partitions isDistinguishable pair
 
--- takePairs :: [(State, State)] -> [[State]] -> [Transition] -> [[State]] -> IO()
--- takePairs [] setOfSetsOfStates transitions partitions = putStrLn "koniec"
--- takePairs (pair:pairOfStates) setOfSetsOfStates transitions partitions = do
---   putStrLn "------------------set-----------"
---   putStrLn $ show setOfSetsOfStates
---   let isDistinguishable = areIndistinguishable pair setOfSetsOfStates transitions
---   let pairInSet = filter(\setOfStates -> (elem (fst pair) setOfStates && elem (snd pair) setOfStates)) partitions
---   if isDistinguishable then putStrLn "true isDistinguishable" else putStrLn "false isDistinguishable"
---   let k = "x" `notElem` pair
---   putStrLn $ show pair
---   if k then putStrLn "nie je" else putStrLn "je"
---   let p = if isDistinguishable && (statesExist pair partitions) && pairInSet == []
---             then concatPairSets pair partitions
---             else if (statesExist pair partitions) then partitions
---             else editSet partitions isDistinguishable pair
-
-  -- if isDistinguishable && (statesExist pair partitions) && pairInSet == []
-  --   then concatPairSets pair partitions
-  --   else putStrLn $ show "tu"
-
-  --let p = if statesExist pair partitions then partitions else editSet partitions isDistinguishable pair
-  --if statesExist pair partitions then putStrLn "true pair statesExist" else putStrLn "false statesExist"
-
-  -- putStrLn "nove rozdelenie"
-  -- putStrLn $ show p
-  --
-  -- takePairs pairOfStates setOfSetsOfStates transitions p
 
 concatPairSets :: (State, State) -> [[State]] -> [[State]]
 concatPairSets pair partitions = do
   let firstSet = concat (filter (\set -> ((fst pair) `elem` set)) partitions)
   let secondSet = concat (filter (\set -> ((snd pair) `elem` set)) partitions)
-  (filter (\set -> ((fst pair) `notElem` set && (snd pair) `notElem` set)) partitions) ++ [(firstSet ++ secondSet)]
-  --(map (\set -> (notElem (fst pair) set && notElem (snd pair) set)) partitions) ++ [(firstSet ++ secondSet)]
-  --let k = restOfSet ++ [(firstSet ++ secondSet)]
-
+  (filter (\set -> ((fst pair) `notElem` set && (snd pair) `notElem` set)) partitions)
+      ++ [(firstSet ++ secondSet)]
 
 
 
@@ -290,13 +216,15 @@ findPartition p isIndistinguishable pairOfStates =
   if isIndistinguishable then
     if (fst pairOfStates) `elem` p
       -- two states of set are indistinguishable
-      then [p ++ [(snd pairOfStates)]]
+      then
+        if (snd pairOfStates) `elem` p then [p] else [p ++ [(snd pairOfStates)]]
       else do
         if p == [] then [[(fst pairOfStates)] ++ [(snd pairOfStates)]] else [p]
     else do
       -- two states of set are distinguishable
       if (fst pairOfStates) `elem` p
-        then [p] ++ [[(snd pairOfStates)]]
+        then
+          if (snd pairOfStates) `elem` p then [p] else [p] ++ [[(snd pairOfStates)]]
         else [[(fst pairOfStates)]] ++ [[(snd pairOfStates)]]
 
 
@@ -357,34 +285,6 @@ removeUnreachableStates dfa =
     -- check if DFA is complete and get transitions to sink state
     sinkT = isComplete t reachableS (alphabet dfa)
 
--- removeUnreachableStates :: DFAStruct -> IO()
--- removeUnreachableStates dfa = do
---   let initState = startState dfa
---   -- states without initial state
---   let s = ((states dfa) \\ [initState])
---   -- only reachable states and transitions let reachable =
---   eliminateStates [] (transitions dfa) [initState] [initState] []
---
---   --let reachableS = fst reachable
---   --let reachableT = snd reachable
---   --putStrLn $ show reachableS
---   -- -- transitions over same state
---   -- let tOverSameState = findTransitionOverSameState (transitions dfa) reachableT reachableS
---   -- -- accept state that are in set of reachable states
---   -- let getReachableAcceptStates acceptStates reachableStates =
---   --   filter (\state -> (elem state reachableStates)) acceptStates
---   -- let t = reachableT ++ tOverSameState
---   -- -- check if DFA is complete and get transitions to sink state
---   -- let sinkT = isComplete t reachableS (alphabet dfa)
---   -- DFAStruct {
---   --   states        = if sinkT == [] then (fst reachable) else (fst reachable) ++ ["x"],
---   --   alphabet      = (alphabet dfa),
---   --   startState    = initState,
---   --   acceptStates  = getReachableAcceptStates (acceptStates dfa) reachableS,
---   --   transitions   = sort $ t ++ sinkT
---   -- }
---   putStrLn "remove"
-
 
 -- |Check if DFA is complete, if not create transition to sink state
 isComplete :: [Transition] -> [State] -> Alphabet -> [Transition]
@@ -399,47 +299,24 @@ isComplete transitions states alphabet
     -- missing transitions
     missingT transitions states alphabet = (allT states alphabet) \\ (existingT transitions)
     -- create transitions with sink state represented as x
-    createSinkStateT missingT = [Transition (fst t) (snd t) "x" | t <- missingT]
+    createSinkStateT missingT = [Transition (fst t) (snd t) "x" | t <- missingT] ++ sinkSTransitions
+    sinkSTransitions = if (missingT transitions states alphabet) /= []
+      then [Transition "x" [symbol] "x" | symbol <- alphabet]
+      else []
 
 
 -- |For every state from set find transition
 -- |where source state is in reachableStates set
-eliminateStates :: [Transition] -> [Transition] -> [State] -> [State] -> [State] -> ([State],[Transition])  --([State],[Transition])
-eliminateStates reachableT transitions [] statesCopy reachableS = (reachableS, reachableT) -- putStrLn "eliminateStates"(reachableS, reachableT)
-eliminateStates reachableT transitions (state:states) statesCopy reachableS = do
-  -- putStrLn $ show reachableS
-  -- putStrLn state
-  if state `elem` reachableS
-    then
-      eliminateStates reachableT transitions states statesCopy reachableS
-    else do
-      -- find all transitions from some of the reachable states to destination state
-      let edge = findTransition transitions state
-      --printTransitions edge
-      let statesDifference = [(dst t) | t <- edge]
-      --putStrLn "difference"
-      --putStrLn $ show statesDifference
-      eliminateStates (reachableT ++ edge) transitions (states ++ statesDifference) statesCopy (reachableS ++ [state])
-  --putStrLn "tu"
-      -- if statesCopy == s
-      --   then putStrLn "eliminateStates1"
-      --   else do
-      --     eliminateStates (reachableT ++ edge) transitions statesDifference statesCopy s
-      --     putStrLn "eliminateStates2"
-
-  --putStrLn "eliminateStates"
-  -- if statesDifference == s
-  --   then putStrLn "eliminateStates"
-  --   else do
-  --     eliminateStates (reachableT ++ edge) transitions statesDifference statesCopy s
-  --     putStrLn "eliminateStates2"
-  -- let edge = findTransition transitions (head statesDifference)
-  -- printTransitions edge
-  -- let s = saveReachableStates reachableS edge
-  -- putStrLn $ show s
-  -- let statesDifference = s \\ statesCopy
-  -- putStrLn $ show statesDifference
-  -- putStrLn $ show (last reachableS)
+eliminateStates :: [Transition] -> [Transition] -> [State] -> [State] -> [State] -> ([State],[Transition])
+eliminateStates reachableT transitions [] statesCopy reachableS = (reachableS, reachableT)
+eliminateStates reachableT transitions (state:states) statesCopy reachableS
+  | state `elem` reachableS = eliminateStates reachableT transitions states statesCopy reachableS
+  | otherwise = eliminateStates (reachableT ++ edge) transitions (states ++ statesDifference)
+                statesCopy (reachableS ++ [state])
+  where
+    -- find all transitions from some of the reachable states to destination state
+    edge = findTransition transitions state
+    statesDifference = [(dst t) | t <- edge]
 
 
 -- |For every reachable state find transition to destination state
