@@ -83,7 +83,7 @@ reduce_dfa()
   echo "-----------------------------------------------------------------------"
   echo -e "${BPur}Minimization of DFA - tests with complete deterministic finite automata${NC}"
   echo "-----------------------------------------------------------------------"
-  for ((i = 0 ; i < 16; i++)); do
+  for ((i = 0 ; i < 18; i++)); do
     if [[ ${i} -gt 9 ]]; then
       INDEX="${i}"
     else
@@ -99,7 +99,7 @@ reduce_dfa()
       echo "Result: ${GREEN}OK${NC}"
     fi
 
-    if [[ ${i} -lt 15 ]]; then
+    if [[ ${i} -lt 17 ]]; then
       echo "----------------"
     fi
   done
@@ -108,7 +108,7 @@ reduce_dfa()
   echo "-------------------------------------------------------------------------"
   echo -e "${BPur}Minimization of DFA - tests with incomplete deterministic finite automata${NC}"
   echo "-------------------------------------------------------------------------"
-  for ((i = 0 ; i < 7; i++)); do
+  for ((i = 0 ; i < 8; i++)); do
     if [[ ${i} -gt 9 ]]; then
       INDEX="${i}"
     else
@@ -124,7 +124,7 @@ reduce_dfa()
       echo "Result: ${GREEN}OK${NC}"
     fi
 
-    if [[ ${i} -lt 6 ]]; then
+    if [[ ${i} -lt 7 ]]; then
       echo "----------------"
     fi
 
