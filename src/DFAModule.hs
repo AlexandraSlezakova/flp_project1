@@ -3,7 +3,7 @@ Project     : VUT FIT FLP Project 1 - DKA-2-MKA
 Author      : Alexandra Slezakova (xsleza20)
 Year        : 2021
 Module      : DFAModule
-Description : Print and validation of input and convertion to the internal representation
+Description : Print and validation of input
 -}
 
 module DFAModule(

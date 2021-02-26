@@ -5,7 +5,7 @@ Year        : 2021
 Module      : MDFAModule
 Description : An implementation of the minimization of deterministic finite automaton
 
-The implementation is realised in 3 steps according to algorithms from TIN scripts:
+The implementation is realized in 3 steps according to algorithms from TIN scripts:
 elimination of the unreachable states, conversion of automaton to a fully defined DFA
 and subsequently reduced DFA
 -}
