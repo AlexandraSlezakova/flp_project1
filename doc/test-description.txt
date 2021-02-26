@@ -1,13 +1,15 @@
 Running the tests
 -------------------------------------------
 
-You must be located in the "test/" folder
+You must be located in the "test/" folder. The binary file named "dka-2-mka" is in parent folder.
 
 $ ./tester.sh (-i|-t)
 
 Option -i is used to test correctness of saving DFA to the internal representation
-and print it to standard output. With option -t, DFA from files are minimized
-and minimal DFA is printed to standard output.
+and print it to standard output, in case of incorrect format of DFA, suffix -bad is added
+to filenames, tester.sh checks, if error in DFA was detected.
+
+With option -t, DFA from files are minimized and minimal DFA is printed to standard output.
 
 Resources for tests:
 -------------------------------------------
