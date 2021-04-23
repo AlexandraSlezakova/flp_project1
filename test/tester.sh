@@ -35,7 +35,7 @@ print_dfa()
   echo "------------------------------------------------------------"
   echo -e "${BPur}Tests with incorrectly written deterministic finite automata${NC}"
   echo "------------------------------------------------------------"
-  SUBSTRING='error'
+  SUBSTRING='Error'
   errors=("Input symbol on transition is not in alpabet"
           "Transition with epsilon"
           "Accept state is not in set of states"
@@ -108,7 +108,7 @@ reduce_dfa()
   echo "-------------------------------------------------------------------------"
   echo -e "${BPur}Minimization of DFA - tests with incomplete deterministic finite automata${NC}"
   echo "-------------------------------------------------------------------------"
-  for ((i = 0 ; i < 8; i++)); do
+  for ((i = 0 ; i < 10; i++)); do
     if [[ ${i} -gt 9 ]]; then
       INDEX="${i}"
     else
@@ -124,7 +124,7 @@ reduce_dfa()
       echo "Result: ${GREEN}OK${NC}"
     fi
 
-    if [[ ${i} -lt 7 ]]; then
+    if [[ ${i} -lt 9 ]]; then
       echo "----------------"
     fi
 
