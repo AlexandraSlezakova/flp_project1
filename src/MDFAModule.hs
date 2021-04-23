@@ -25,7 +25,8 @@ import Parser
 minimizeDFA :: DFAStruct -> IO()
 minimizeDFA dfa
   | null (transitions dfa) = printDFA (createEmptyDKA (alphabet dfa))
-  | otherwise = printDFA (reduceDFA removedSink tr completeDFA)
+  | otherwise =
+      printDFA (reduceDFA mdfaStates (transitions completeDFA) completeDFA)
   where
     -- remove unreachable states
     completeDFA = removeUnreachableStates dfa
@@ -35,23 +36,20 @@ minimizeDFA dfa
     nonFinalStatesSet = states completeDFA \\ finalStatesSet
     -- new states of minimal DFA
     mdfaStates = createStates [] (finalStatesSet : [nonFinalStatesSet]) (transitions completeDFA)
-    -- set with sink state is removed
-    removedSink = removeSinkState mdfaStates []
-    diff = mdfaStates \\ removedSink
-    tr = if null diff
-          then transitions completeDFA
-          else removeSinkStateT (transitions completeDFA) [] diff
 
 
 -- |Create empty DFA when no transitions are as an input
 createEmptyDKA :: Alphabet -> DFAStruct
 createEmptyDKA alphabet = DFAStruct {
-  states        = ["0"],
+  states        = ["0", "1"],
   alphabet      = alphabet,
   startState    = "0",
   acceptStates  = [],
-  transitions   = []
+  transitions   = tr
 }
+  where
+    st = ["0", "1"]
+    tr = [Transition src [symbol] "1" | src <- st, symbol <- alphabet]
 
 
 -- |Remove transitions to sink state
@@ -105,7 +103,8 @@ getAcceptStates stateMap (state:acceptStates) set
 
 
 -- |Create transitions for every state
-createTransitions :: [Transition] -> [[State]] -> (StateMap, [Transition]) -> StateMap -> [Transition] -> (StateMap, [Transition])
+createTransitions :: [Transition] -> [[State]] -> (StateMap, [Transition]) -> StateMap
+  -> [Transition] -> (StateMap, [Transition])
 createTransitions originalT mdfaState stateMapT [] newT = (fst stateMapT, newT)
 createTransitions originalT mdfaState stateMapT (state:states) newT = do
   let s = head (fst state)
@@ -230,7 +229,7 @@ statesExist :: (State, State) -> [[State]] -> Bool
 statesExist pairOfStates partitions = stateExists (fst pairOfStates) partitions
   + stateExists (snd pairOfStates) partitions > 1
   where
-    stateExists state set = length (filter (\p -> (state `elem` p)) set)
+    stateExists state set = length (filter (\p -> state `elem` p) set)
 
 
 -- |Check if two state are indistinguishable
@@ -241,7 +240,7 @@ areIndistinguishable pairOfStates setOfSetsOfStates transitions = do
   -- all transitions of second state
   let state2T = getTransitionsOfState (snd pairOfStates) transitions
   -- destination states with same input symbol
-  let ds = [(dst t1, dst t2) | t1 <- state1T, t2 <- state2T, (symbol t1) == (symbol t2)]
+  let ds = [(dst t1, dst t2) | t1 <- state1T, t2 <- state2T, symbol t1 == symbol t2]
   isInSameSet ds setOfSetsOfStates
 
 
@@ -249,8 +248,8 @@ areIndistinguishable pairOfStates setOfSetsOfStates transitions = do
 isInSameSet :: [(State, State)] -> [[State]] -> Bool
 isInSameSet [] setOfSetsOfStates = True
 isInSameSet (pair:destinationStates) setOfSetsOfStates = do
-  let ret = filter(\setOfStates -> (elem (fst pair) setOfStates
-                  && elem (snd pair) setOfStates)) setOfSetsOfStates
+  let ret = filter(\setOfStates -> elem (fst pair) setOfStates
+                  && elem (snd pair) setOfStates) setOfSetsOfStates
   not (null ret) && isInSameSet destinationStates setOfSetsOfStates
 
 
@@ -277,7 +276,7 @@ removeUnreachableStates dfa =
     tOverSameState = findTransitionOverSameState (transitions dfa) reachableT reachableS
     -- accept state that are in set of reachable states
     getReachableAcceptStates acceptStates reachableStates =
-      filter (\state -> state `elem` reachableStates) acceptStates
+      filter (`elem` reachableStates) acceptStates
     t = reachableT ++ tOverSameState
     -- check if DFA is complete and get transitions to sink state
     sinkT = isComplete t reachableS (alphabet dfa)

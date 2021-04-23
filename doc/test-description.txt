@@ -9,7 +9,7 @@ Option -i is used to test correctness of saving DFA to the internal representati
 and print it to standard output, in case of incorrect format of DFA, suffix -bad is added
 to filenames, tester.sh checks, if error in DFA was detected.
 
-With option -t, DFA from files are minimized and minimal DFA is printed to standard output.
+With option -t, DFAs from files are minimized and minimal DFA is printed to standard output.
 
 Resources for tests:
 -------------------------------------------
@@ -21,7 +21,7 @@ Directory layout
 -------------------------------------------
 test
 │   tester.sh
-└───correct_dfa/          		# tests for option -i
+└───correct_dfa/              # tests for option -i
 │
 └───reduced_dfa/              # tests for option -t
     │

@@ -61,7 +61,7 @@ printDFA dfa = do
   -- start state
   putStrLn $ startState dfa
   -- accept states
-  when (acceptStates dfa /= []) $ putStrLn $ intercalate "," $ acceptStates dfa
+  if acceptStates dfa /= [] then putStrLn $ intercalate "," $ acceptStates dfa else putStrLn ""
   -- transitions
   printTransitions $ transitions dfa
 
